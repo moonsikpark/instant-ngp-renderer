@@ -205,6 +205,10 @@ list(APPEND NGP_DEFINITIONS -DNGP_VERSION="${NGP_VERSION}")
 
 include_directories("include")
 
+find_package(Protobuf REQUIRED)
+add_subdirectory(proto)
+include_directories(${CMAKE_BINARY_DIR})
+
 set(SOURCES
 	${GL_SOURCES}
 	src/camera_path.cu
@@ -281,7 +285,7 @@ target_compile_options(ngp PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}
 target_compile_definitions(ngp PUBLIC ${NGP_DEFINITIONS} ${TCNN_DEFINITIONS})
 
 add_executable(testbed src/main.cu)
-target_link_libraries(testbed PUBLIC ngp)
+target_link_libraries(testbed PUBLIC ngp proto)
 target_compile_options(testbed PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
 target_compile_definitions(testbed PUBLIC ${NGP_DEFINITIONS} ${TCNN_DEFINITIONS})
 
