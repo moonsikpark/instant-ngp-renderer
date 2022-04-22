@@ -208,6 +208,7 @@ include_directories("include")
 set(SOURCES
 	${GL_SOURCES}
 	src/camera_path.cu
+	src/nes_client.cu
 	src/common_device.cu
 	src/marching_cubes.cu
 	src/nerf_loader.cu
