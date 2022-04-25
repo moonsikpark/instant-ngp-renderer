@@ -213,6 +213,7 @@ set(SOURCES
 	${GL_SOURCES}
 	src/camera_path.cu
 	src/nes_client.cu
+	src/nes_common.cpp
 	src/common_device.cu
 	src/marching_cubes.cu
 	src/nerf_loader.cu

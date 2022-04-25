@@ -99,6 +99,13 @@ int main(int argc, char **argv)
 		{"nes_address"},
 	};
 
+	ValueFlag<uint16_t> nes_port_flag{
+		parser,
+		"PORT",
+		"Port to ngp-encoding-server when on client mode.",
+		{"nes_port"},
+	};
+
 	ValueFlag<uint32_t> width_flag{
 		parser,
 		"WIDTH",
@@ -152,7 +159,7 @@ int main(int argc, char **argv)
 
 	if (client_flag)
 	{
-		nes::nes_client(get(nes_address_flag));
+		nes::nes_client(get(nes_address_flag), get(nes_port_flag), get(scene_flag), get(snapshot_flag));
 		return 0;
 	}
 
