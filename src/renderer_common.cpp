@@ -3,12 +3,12 @@
  *
  */
 
-/** @file   nes_common.cpp
+/** @file   renderer_common.cpp
  *  @author Moonsik Park, Korean Institute of Science and Technology
  */
 
 #include <neural-graphics-primitives/common.h>
-#include <neural-graphics-primitives/nes_common.h>
+#include <neural-graphics-primitives/renderer_common.h>
 
 #include <unistd.h>
 #include <sys/socket.h>

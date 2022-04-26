@@ -3,7 +3,7 @@
  *
  */
 
-/** @file   nes_client.h
+/** @file   renderer_common.h
  *  @author Moonsik Park, Korea Institute of Science and Technology
  */
 

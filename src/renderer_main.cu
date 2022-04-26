@@ -3,15 +3,16 @@
  *
  */
 
-/** @file   nes_client.cu
+/** @file   renderer_main.cu
  *  @author Moonsik Park, Korean Institute of Science and Technology
  */
 
 #include <csignal>
+#include <thread>
 
 #include <neural-graphics-primitives/testbed.h>
 
-#include <neural-graphics-primitives/nes_client.h>
+#include <neural-graphics-primitives/renderer_main.h>
 
 #include <tiny-cuda-nn/common.h>
 
@@ -123,7 +124,7 @@ namespace nes
         return fd;
     }
 
-    void nes_client(std::string &nes_addr, uint16_t nes_port, std::string &scene_location, std::string &snapshot_location)
+    void render_server(std::string &nes_addr, uint16_t nes_port, std::string &scene_location, std::string &snapshot_location)
     {
         GOOGLE_PROTOBUF_VERIFY_VERSION;
         signal(SIGINT, signal_handler);

@@ -14,7 +14,7 @@
 
 #include <neural-graphics-primitives/testbed.h>
 
-#include <neural-graphics-primitives/nes_client.h>
+#include <neural-graphics-primitives/renderer_main.h>
 
 #include <tiny-cuda-nn/common.h>
 
@@ -87,9 +87,9 @@ int main(int argc, char **argv)
 
 	Flag client_flag{
 		parser,
-		"NES_CLIENT",
-		"Start as a ngp-encoding-server client.",
-		{"nes_client"},
+		"RENDER_SERVER",
+		"Start as a render server.",
+		{"render_server"},
 	};
 
 	ValueFlag<string> address_flag{
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
 	if (client_flag)
 	{
-		nes::nes_client(get(address_flag), get(port_flag), get(scene_flag), get(snapshot_flag));
+		nes::render_server(get(address_flag), get(port_flag), get(scene_flag), get(snapshot_flag));
 		return 0;
 	}
 
