@@ -92,17 +92,17 @@ int main(int argc, char **argv)
 		{"nes_client"},
 	};
 
-	ValueFlag<string> nes_address_flag{
+	ValueFlag<string> address_flag{
 		parser,
 		"ADDRESS",
-		"Address to ngp-encoding-server when on client mode.",
+		"Address to bind to.",
 		{"nes_address"},
 	};
 
-	ValueFlag<uint16_t> nes_port_flag{
+	ValueFlag<uint16_t> port_flag{
 		parser,
 		"PORT",
-		"Port to ngp-encoding-server when on client mode.",
+		"Port to bind to.",
 		{"nes_port"},
 	};
 
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
 	if (client_flag)
 	{
-		nes::nes_client(get(nes_address_flag), get(nes_port_flag), get(scene_flag), get(snapshot_flag));
+		nes::nes_client(get(address_flag), get(port_flag), get(scene_flag), get(snapshot_flag));
 		return 0;
 	}
 

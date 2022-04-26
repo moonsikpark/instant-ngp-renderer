@@ -97,18 +97,28 @@ namespace nes
 
         if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
-            throw std::runtime_error{"Failed to create socket: " + std::string(std::strerror(errno))};
+            throw std::runtime_error{"nes_connect: Failed to create socket: " + std::string(std::strerror(errno))};
         }
 
         memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = inet_addr(nes_addr.c_str());
         addr.sin_port = htons(nes_port);
-        if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         {
-            throw std::runtime_error{"Failed to connect: " + std::string(std::strerror(errno))};
+            throw std::runtime_error{"nes_connect: Failed to bind to socket: " + std::string(std::strerror(errno))};
         }
-        tlog::success() << "nes_connect: Connected to " << nes_addr;
+
+        // Listen to the socket.
+        if ((listen(fd, /* backlog= */ 2)) < 0)
+        {
+            throw std::runtime_error{"Failed to listen to socket: " + std::string(std::strerror(errno))};
+        }
+        // Todo: make socket unblocking.
+        if ((fd = accept(fd, NULL, NULL)) < 0)
+        {
+            throw std::runtime_error{"socket_main_thread: Failed to accept client: " + std::string(std::strerror(errno))};
+        }
 
         return fd;
     }
@@ -160,7 +170,7 @@ namespace nes
 
             nes::socket_send_blocking_lpf(serverfd, (uint8_t *)frame_serialized.data(), frame_serialized.size());
 
-            tlog::info() << "Sent RenderedFramet index=" << request.index();
+            tlog::info() << "Sent RenderedFrame index=" << request.index();
         }
     }
 }
