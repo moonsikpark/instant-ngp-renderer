@@ -213,7 +213,8 @@ set(SOURCES
 	${GL_SOURCES}
 	src/camera_path.cu
 	src/renderer_main.cu
-	src/renderer_common.cpp
+	src/renderer_common.cu
+	src/renderer_server.cu
 	src/common_device.cu
 	src/marching_cubes.cu
 	src/nerf_loader.cu

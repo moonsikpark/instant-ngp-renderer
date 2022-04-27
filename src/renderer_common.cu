@@ -3,7 +3,7 @@
  *
  */
 
-/** @file   renderer_common.cpp
+/** @file   renderer_common.cu
  *  @author Moonsik Park, Korean Institute of Science and Technology
  */
 
@@ -18,6 +18,50 @@
 
 namespace nes
 {
+
+    Eigen::Matrix<float, 3, 4> cam_to_matrix(nesproto::Camera cam)
+    {
+        Eigen::Matrix<float, 3, 4> mat;
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                mat(i, j) = cam.matrix(i * 4 + j);
+            }
+        }
+
+        return mat;
+    }
+
+    std::string render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf)
+    {
+        testbed.m_render_mode = mode;
+        testbed.m_windowless_render_surface.resize({request.width(), request.height()});
+        Eigen::Matrix<float, 3, 4> cam_matrix(cam_to_matrix(request.camera()));
+        testbed.m_windowless_render_surface.reset_accumulation();
+        testbed.render_frame(cam_matrix, cam_matrix, Eigen::Vector4f::Zero(), testbed.m_windowless_render_surface, true);
+
+        CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf, request.width() * sizeof(float) * 4, testbed.m_windowless_render_surface.surface_provider().array(), 0, 0, request.width() * sizeof(float) * 4, request.height(), cudaMemcpyDeviceToHost));
+
+        size_t size;
+
+        if (mode == ngp::ERenderMode::Shade)
+        {
+            size = request.width() * request.height() * 4;
+        }
+        else
+        {
+            size = request.width() * request.height();
+        }
+
+        for (int i = 0; i < size; i++)
+        {
+            cbuf[i] = static_cast<int>(fbuf[i] * 255);
+        }
+
+        return std::string(cbuf, cbuf + size);
+    }
+
     int socket_send_blocking(int clientfd, uint8_t *buf, size_t size)
     {
         ssize_t ret;
