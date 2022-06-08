@@ -63,7 +63,7 @@ namespace nes
             // todo: one render can output frame and depth.
             // look at __global__ void shade_kernel_sdf()
             // frame.set_depth(render(testbed, request, ERenderMode::Depth, fbuf.get(), cbuf.get()));
-            tlog::success() << "server_client_thread: Rendered frame index=" << request.index();
+            tlog::success() << "server_client_thread: Rendered frame index=" << request.index() << " width=" << request.camera().width() << " height=" << request.camera().height();
 
             std::string frame_buffer = frame.SerializeAsString();
 
