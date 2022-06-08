@@ -58,8 +58,6 @@ namespace nes
             frame.set_allocated_camera(new nesproto::Camera(request.camera()));
 
             // todo: don't blindly follow server's resolution direction
-            frame.set_width(request.width());
-            frame.set_height(request.height());
             frame.set_pixelformat(nesproto::RenderedFrame_PixelFormat::RenderedFrame_PixelFormat_BGR32);
             frame.set_frame(render(testbed, request, ngp::ERenderMode::Shade, fbuf.get(), cbuf.get()));
             // todo: one render can output frame and depth.

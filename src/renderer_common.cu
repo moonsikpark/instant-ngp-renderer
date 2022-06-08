@@ -35,23 +35,25 @@ namespace nes
 
     std::string render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf)
     {
+        uint32_t width = request.camera().width();
+        uint32_t height = request.camera().height();
         testbed.m_render_mode = mode;
-        testbed.m_windowless_render_surface.resize({request.width(), request.height()});
+        testbed.m_windowless_render_surface.resize({width, height});
         Eigen::Matrix<float, 3, 4> cam_matrix(cam_to_matrix(request.camera()));
         testbed.m_windowless_render_surface.reset_accumulation();
         testbed.render_frame(cam_matrix, cam_matrix, Eigen::Vector4f::Zero(), testbed.m_windowless_render_surface, true);
 
-        CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf, request.width() * sizeof(float) * 4, testbed.m_windowless_render_surface.surface_provider().array(), 0, 0, request.width() * sizeof(float) * 4, request.height(), cudaMemcpyDeviceToHost));
+        CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf, width * sizeof(float) * 4, testbed.m_windowless_render_surface.surface_provider().array(), 0, 0, width * sizeof(float) * 4, height, cudaMemcpyDeviceToHost));
 
         size_t size;
 
         if (mode == ngp::ERenderMode::Shade)
         {
-            size = request.width() * request.height() * 4;
+            size = width * height * 4;
         }
         else
         {
-            size = request.width() * request.height();
+            size = width * height;
         }
 
         for (int i = 0; i < size; i++)
