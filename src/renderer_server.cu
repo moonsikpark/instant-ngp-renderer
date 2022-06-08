@@ -117,8 +117,8 @@ namespace nes
                 if (errno == EAGAIN || errno == EINTR || errno == ECONNABORTED)
                 {
                     // Sleep and wait again for connections.
-                    tlog::info() << "server_main_thread: Waiting for ngp-encode-server to connect.";
-                    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+                    tlog::info() << "server_main_thread: Waiting for ngp-encode-server to connect at " << bind_addr << ":" << bind_port;
+                    std::this_thread::sleep_for(std::chrono::milliseconds{1000});
                     continue;
                 }
                 else
