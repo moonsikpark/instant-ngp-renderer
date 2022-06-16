@@ -1884,6 +1884,7 @@ Testbed::Testbed(ETestbedMode mode)
 	set_max_level(1.f);
 
 	CUDA_CHECK_THROW(cudaStreamCreate(&m_inference_stream));
+	CUDA_CHECK_THROW(cudaStreamCreate(&m_inference_stream_depth));
 	m_training_stream = m_inference_stream;
 }
 
@@ -2076,6 +2077,136 @@ void Testbed::render_frame(const Matrix<float, 3, 4>& camera_matrix0, const Matr
 	}
 
 	CUDA_CHECK_THROW(cudaStreamSynchronize(m_inference_stream));
+}
+
+void Testbed::render_frame_with_depth(const Matrix<float, 3, 4>& camera_matrix0, const Matrix<float, 3, 4>& camera_matrix1, const Vector4f& nerf_rolling_shutter, CudaRenderBuffer& render_buffer, CudaRenderBuffer& render_buffer_depth, bool to_srgb) {
+	Vector2i max_res = m_window_res.cwiseMax(render_buffer.resolution());
+
+	render_buffer.clear_frame_buffer(m_inference_stream);
+	render_buffer_depth.clear_frame_buffer(m_inference_stream_depth);
+
+	Vector2f focal_length = calc_focal_length(render_buffer.resolution(), m_fov_axis, m_zoom);
+	Vector2f screen_center = render_screen_center();
+
+	switch (m_testbed_mode) {
+		case ETestbedMode::Nerf:
+			if (!m_render_ground_truth) {
+				render_nerf_with_depth(render_buffer, render_buffer_depth, max_res, focal_length, camera_matrix0, camera_matrix1, nerf_rolling_shutter, screen_center, m_inference_stream, m_inference_stream_depth);
+			}
+			break;
+		case ETestbedMode::Sdf:
+			{
+				distance_fun_t distance_fun =
+					m_render_ground_truth ? (distance_fun_t)[&](uint32_t n_elements, const GPUMemory<Vector3f>& positions, GPUMemory<float>& distances, cudaStream_t stream) {
+						m_sdf.triangle_bvh->signed_distance_gpu(
+							n_elements,
+							m_sdf.mesh_sdf_mode,
+							(Vector3f*)positions.data(),
+							distances.data(),
+							m_sdf.triangles_gpu.data(),
+							false,
+							m_training_stream
+						);
+					} : (distance_fun_t)[&](uint32_t n_elements, const GPUMemory<Vector3f>& positions, GPUMemory<float>& distances, cudaStream_t stream) {
+						if (n_elements == 0) {
+							return;
+						}
+
+						n_elements = next_multiple(n_elements, tcnn::batch_size_granularity);
+
+						GPUMatrix<float> positions_matrix((float*)positions.data(), 3, n_elements);
+						GPUMatrix<float, RM> distances_matrix(distances.data(), 1, n_elements);
+						m_network->inference(stream, positions_matrix, distances_matrix);
+					};
+
+				normals_fun_t normals_fun =
+					m_render_ground_truth ? (normals_fun_t)[&](uint32_t n_elements, const GPUMemory<Vector3f>& positions, GPUMemory<Vector3f>& normals, cudaStream_t stream) {
+						// NO-OP. Normals will automatically be populated by raytrace
+					} : (normals_fun_t)[&](uint32_t n_elements, const GPUMemory<Vector3f>& positions, GPUMemory<Vector3f>& normals, cudaStream_t stream) {
+						if (n_elements == 0) {
+							return;
+						}
+
+						n_elements = next_multiple(n_elements, tcnn::batch_size_granularity);
+
+						GPUMatrix<float> positions_matrix((float*)positions.data(), 3, n_elements);
+						GPUMatrix<float> normals_matrix((float*)normals.data(), 3, n_elements);
+						m_network->input_gradient(stream, 0, positions_matrix, normals_matrix);
+					};
+
+				render_sdf(
+					distance_fun,
+					normals_fun,
+					render_buffer,
+					max_res,
+					focal_length,
+					camera_matrix0,
+					screen_center,
+					m_inference_stream
+				);
+			}
+			break;
+		case ETestbedMode::Image:
+			render_image(render_buffer, m_inference_stream);
+			break;
+		case ETestbedMode::Volume:
+			render_volume(render_buffer, focal_length, camera_matrix0, screen_center, m_inference_stream);
+			break;
+		default:
+			throw std::runtime_error{"Invalid render mode."};
+	}
+
+	render_buffer.set_color_space(m_color_space);
+	render_buffer.set_tonemap_curve(m_tonemap_curve);
+	render_buffer.accumulate(m_inference_stream);
+	render_buffer.tonemap(m_exposure, m_background_color, to_srgb ? EColorSpace::SRGB : EColorSpace::Linear, m_inference_stream);
+
+	render_buffer_depth.set_color_space(m_color_space);
+	render_buffer_depth.set_tonemap_curve(m_tonemap_curve);
+	render_buffer_depth.accumulate(m_inference_stream_depth);
+	render_buffer_depth.tonemap(m_exposure, m_background_color, to_srgb ? EColorSpace::SRGB : EColorSpace::Linear, m_inference_stream_depth);
+
+	if (m_testbed_mode == ETestbedMode::Nerf) {
+		// Overlay the ground truth image if requested
+		if (m_render_ground_truth) {
+			float alpha=1.f;
+			render_buffer.overlay_image(
+				alpha,
+				Array3f::Constant(m_exposure) + m_nerf.training.cam_exposure[m_nerf.training.view].variable(),
+				m_background_color,
+				to_srgb ? EColorSpace::SRGB : EColorSpace::Linear,
+				m_nerf.training.dataset.images_data.data() + m_nerf.training.view * (size_t)m_nerf.training.dataset.image_resolution.prod() * 4,
+				m_nerf.training.dataset.image_resolution,
+				m_fov_axis,
+				m_zoom,
+				Vector2f::Constant(0.5f),
+				m_inference_stream
+			);
+		}
+
+		// Visualize the accumulated error map if requested
+		if (m_nerf.training.render_error_overlay) {
+			const float* err_data = m_nerf.training.error_map.data.data();
+			Vector2i error_map_res = m_nerf.training.error_map.resolution;
+			if (m_render_ground_truth) {
+				err_data = m_nerf.training.dataset.sharpness_data.data();
+				error_map_res = m_nerf.training.dataset.sharpness_resolution;
+			}
+			size_t emap_size = error_map_res.x() * error_map_res.y();
+			err_data += emap_size * m_nerf.training.view;
+			static GPUMemory<float> average_error;
+			average_error.enlarge(1);
+			average_error.memset(0);
+			const float* aligned_err_data_s = (const float*)(((size_t)err_data)&~15);
+			const float* aligned_err_data_e = (const float*)(((size_t)(err_data+emap_size))&~15);
+			size_t reduce_size = aligned_err_data_e - aligned_err_data_s;
+			reduce_sum(aligned_err_data_s, [reduce_size] __device__ (float val) { return max(val,0.f) / (reduce_size); }, average_error.data(), reduce_size, m_inference_stream);
+			render_buffer.overlay_false_color(m_nerf.training.dataset.image_resolution, to_srgb, m_fov_axis, m_inference_stream, err_data, error_map_res, average_error.data(), m_nerf.training.error_overlay_brightness, m_render_ground_truth);
+		}
+	}
+
+	CUDA_CHECK_THROW(cudaStreamSynchronize(m_inference_stream));
+	CUDA_CHECK_THROW(cudaStreamSynchronize(m_inference_stream_depth));	
 }
 
 // Determines the 3d focus point by rendering a little 16x16 depth image around

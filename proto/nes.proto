@@ -11,18 +11,13 @@ message Camera {
 message FrameRequest {
     uint64 index = 1;
     Camera camera = 2;
+    bool is_left = 3;
 }
 
 message RenderedFrame {
     uint64 index = 1;
     Camera camera = 2;
-
-    enum PixelFormat {
-      BGR32 = 0;
-      YUV420P = 1;
-    }
-
-    PixelFormat pixelformat = 5;
+    bool is_left = 3;
     
     bytes frame = 6;
     bytes depth = 7;

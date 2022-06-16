@@ -33,35 +33,46 @@ namespace nes
         return mat;
     }
 
-    std::string render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf)
+    std::vector<std::string> render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf, float *fbuf_depth, char *cbuf_depth)
     {
         uint32_t width = request.camera().width();
         uint32_t height = request.camera().height();
         testbed.m_render_mode = mode;
         testbed.m_windowless_render_surface.resize({width, height});
+        testbed.m_windowless_render_surface_depth.resize({width, height});
         Eigen::Matrix<float, 3, 4> cam_matrix(cam_to_matrix(request.camera()));
         testbed.m_windowless_render_surface.reset_accumulation();
-        testbed.render_frame(cam_matrix, cam_matrix, Eigen::Vector4f::Zero(), testbed.m_windowless_render_surface, true);
-
+        testbed.m_windowless_render_surface_depth.reset_accumulation();
+        testbed.render_frame_with_depth(cam_matrix, cam_matrix, Eigen::Vector4f::Zero(), testbed.m_windowless_render_surface, testbed.m_windowless_render_surface_depth, true);
         CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf, width * sizeof(float) * 4, testbed.m_windowless_render_surface.surface_provider().array(), 0, 0, width * sizeof(float) * 4, height, cudaMemcpyDeviceToHost));
+        CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf_depth, width * sizeof(float) * 4, testbed.m_windowless_render_surface_depth.surface_provider().array(), 0, 0, width * sizeof(float) * 4, height, cudaMemcpyDeviceToHost));
 
         size_t size;
 
-        if (mode == ngp::ERenderMode::Shade)
-        {
-            size = width * height * 4;
-        }
-        else
-        {
-            size = width * height;
-        }
-
+        size = width * height * 4;
+        
+        int buf_idx = 0;
+        int buf_depth_idx = 0;
         for (int i = 0; i < size; i++)
         {
-            cbuf[i] = static_cast<int>(fbuf[i] * 255);
+            if (i % 4 != 3) {
+                cbuf[buf_idx] = static_cast<int>(fbuf[i] * 255);
+                if (i % 4 == 0) {
+                    int val = static_cast<int>((fbuf_depth[i] * 0.03125f) * 255);
+                    cbuf_depth[buf_depth_idx] = val > 255 ? 255 : val;
+                    buf_depth_idx++;
+                }
+                buf_idx++;
+            }
         }
+        
 
-        return std::string(cbuf, cbuf + size);
+        std::string a(cbuf, cbuf + buf_idx);
+        std::string b(cbuf_depth, cbuf_depth + buf_depth_idx);
+
+        std::vector<std::string> ret = {a, b};
+
+        return ret;
     }
 
     int socket_send_blocking(int clientfd, uint8_t *buf, size_t size)
@@ -141,17 +152,16 @@ namespace nes
     // Receive message with length prefix framing.
     std::string socket_receive_blocking_lpf(int clientfd)
     {
-        int ret;
         size_t size;
         // hack: not very platform portable
-        if ((ret = socket_receive_blocking(clientfd, (uint8_t *)&size, sizeof(size))) < 0)
+        if (socket_receive_blocking(clientfd, (uint8_t *)&size, sizeof(size)) < 0)
         {
             throw std::runtime_error{"socket_receive_blocking_lpf: Error while receiving data size from socket."};
         }
 
         auto buffer = std::make_unique<char[]>(size);
 
-        if ((ret = socket_receive_blocking(clientfd, (uint8_t *)buffer.get(), size)) < 0)
+        if (socket_receive_blocking(clientfd, (uint8_t *)buffer.get(), size) < 0)
         {
             throw std::runtime_error{"socket_receive_blocking_lpf: Error while receiving data from socket."};
         }

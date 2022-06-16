@@ -261,8 +261,10 @@ public:
 		cudaStream_t stream
 	);
 	void render_nerf(CudaRenderBuffer& render_buffer, const Eigen::Vector2i& max_res, const Eigen::Vector2f& focal_length, const Eigen::Matrix<float, 3, 4>& camera_matrix0, const Eigen::Matrix<float, 3, 4>& camera_matrix1, const Eigen::Vector4f& rolling_shutter, const Eigen::Vector2f& screen_center, cudaStream_t stream);
+	void render_nerf_with_depth(CudaRenderBuffer& render_buffer, CudaRenderBuffer& render_buffer_depth, const Eigen::Vector2i& max_res, const Eigen::Vector2f& focal_length, const Eigen::Matrix<float, 3, 4>& camera_matrix0, const Eigen::Matrix<float, 3, 4>& camera_matrix1, const Eigen::Vector4f& rolling_shutter, const Eigen::Vector2f& screen_center, cudaStream_t stream, cudaStream_t stream_depth);
 	void render_image(CudaRenderBuffer& render_buffer, cudaStream_t stream);
 	void render_frame(const Eigen::Matrix<float, 3, 4>& camera_matrix0, const Eigen::Matrix<float, 3, 4>& camera_matrix1, const Eigen::Vector4f& nerf_rolling_shutter, CudaRenderBuffer& render_buffer, bool to_srgb = true) ;
+	void render_frame_with_depth(const Eigen::Matrix<float, 3, 4>& camera_matrix0, const Eigen::Matrix<float, 3, 4>& camera_matrix1, const Eigen::Vector4f& nerf_rolling_shutter, CudaRenderBuffer& render_buffer, CudaRenderBuffer& render_buffer_depth, bool to_srgb = true);
 	void visualize_nerf_cameras(const Eigen::Matrix<float, 4, 4>& world2proj);
 	nlohmann::json load_network_config(const filesystem::path& network_config_path);
 	void reload_network_from_file(const std::string& network_config_path);
@@ -728,6 +730,7 @@ public:
 	// CUDA stuff
 	cudaStream_t m_training_stream;
 	cudaStream_t m_inference_stream;
+	cudaStream_t m_inference_stream_depth;
 
 	// Hashgrid encoding analysis
 	float m_quant_percent = 0.f;
@@ -755,6 +758,7 @@ public:
 	default_rng_t m_rng;
 
 	CudaRenderBuffer m_windowless_render_surface{std::make_shared<CudaSurface2D>()};
+	CudaRenderBuffer m_windowless_render_surface_depth{std::make_shared<CudaSurface2D>()};
 
 	uint32_t network_width(uint32_t layer) const;
 	uint32_t network_num_forward_activations() const;

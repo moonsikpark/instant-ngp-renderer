@@ -80,7 +80,7 @@ public:
 
 namespace nes
 {
-    std::string render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf);
+    std::vector<std::string> render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf, float *fbuf_depth, char *cbuf_depth);
     Eigen::Matrix<float, 3, 4> cam_to_matrix(nesproto::Camera cam);
     int socket_send_blocking(int clientfd, uint8_t *buf, size_t size);
     int socket_send_blocking_lpf(int clientfd, uint8_t *buf, size_t size);

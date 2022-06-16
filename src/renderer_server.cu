@@ -31,6 +31,8 @@ namespace nes
         size_t size = 1024 * 1024 * 50;
         auto fbuf = std::make_unique<float[]>(size);
         auto cbuf = std::make_unique<char[]>(size);
+        auto fbuf_depth = std::make_unique<float[]>(size);
+        auto cbuf_depth = std::make_unique<char[]>(size);
 
         while (!shutdown_requested)
         {
@@ -55,15 +57,18 @@ namespace nes
 
             frame.set_index(request.index());
 
-            frame.set_allocated_camera(new nesproto::Camera(request.camera()));
+            frame.mutable_camera()->CopyFrom(request.camera());
 
-            // todo: don't blindly follow server's resolution direction
-            frame.set_pixelformat(nesproto::RenderedFrame_PixelFormat::RenderedFrame_PixelFormat_BGR32);
-            frame.set_frame(render(testbed, request, ngp::ERenderMode::Shade, fbuf.get(), cbuf.get()));
+            auto frames = render(testbed, request, ngp::ERenderMode::Shade, fbuf.get(), cbuf.get(), fbuf_depth.get(), cbuf_depth.get());
+            frame.set_frame(frames[0]);
+            frame.set_depth(frames[1]);
+            frame.set_is_left(request.is_left());
+
             // todo: one render can output frame and depth.
             // look at __global__ void shade_kernel_sdf()
             // frame.set_depth(render(testbed, request, ERenderMode::Depth, fbuf.get(), cbuf.get()));
-            tlog::success() << "server_client_thread: Rendered frame index=" << request.index() << " width=" << request.camera().width() << " height=" << request.camera().height();
+            std::string direction = request.is_left() ? "left" : "right";
+            tlog::success() << "server_client_thread: Rendered " << direction << " frame index=" << request.index() << " width=" << request.camera().width() << " height=" << request.camera().height();
 
             std::string frame_buffer = frame.SerializeAsString();
 
