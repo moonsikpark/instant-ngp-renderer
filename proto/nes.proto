@@ -3,6 +3,7 @@ syntax = "proto3";
 package nesproto;
 
 message Camera {
+    bool is_left = 2;
     uint32 width = 3;
     uint32 height = 4;
     repeated float matrix = 12;
