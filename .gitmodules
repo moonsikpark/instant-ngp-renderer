@@ -19,3 +19,9 @@
 [submodule "dependencies/imgui"]
 	path = dependencies/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "dependencies/glm"]
+	path = dependencies/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "dependencies/glut"]
+	path = dependencies/glut
+	url = https://github.com/FreeGLUTProject/freeglut.git
