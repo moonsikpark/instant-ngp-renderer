@@ -111,6 +111,7 @@ namespace nes
                     idx += 3;
                 }
             } else {
+                render(testbed, request, ngp::ERenderMode::Shade, fbuf.get(), fbuf_depth.get());
                 for(int i = 0; i < request.camera().width() * request.camera().height(); i++) {
                         cbuf_depth_tested[idx] = static_cast<int>(fbuf[i*4] * 255);
                         cbuf_depth_tested[idx+1] = static_cast<int>(fbuf[i*4+1] * 255);
