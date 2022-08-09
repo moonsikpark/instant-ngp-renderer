@@ -120,6 +120,13 @@ int main(int argc, char **argv)
 		{"height"},
 	};
 
+	Flag depth_test_flag{
+		parser,
+		"DEPTH_TEST",
+		"Enable depth test.",
+		{"depth_test"},
+	};
+
 	Flag version_flag{
 		parser,
 		"VERSION",
@@ -159,7 +166,7 @@ int main(int argc, char **argv)
 
 	if (client_flag)
 	{
-		nes::render_server(get(address_flag), get(port_flag), get(scene_flag), get(snapshot_flag));
+		nes::render_server(get(address_flag), get(port_flag), get(scene_flag), get(snapshot_flag), depth_test_flag);
 		return 0;
 	}
 

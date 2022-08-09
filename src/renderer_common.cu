@@ -33,7 +33,7 @@ namespace nes
         return mat;
     }
 
-    std::vector<std::string> render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, char *cbuf, float *fbuf_depth, char *cbuf_depth)
+    void render(ngp::Testbed &testbed, nesproto::FrameRequest request, ngp::ERenderMode mode, float *fbuf, float *fbuf_depth)
     {
         uint32_t width = request.camera().width();
         uint32_t height = request.camera().height();
@@ -47,32 +47,6 @@ namespace nes
         CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf, width * sizeof(float) * 4, testbed.m_windowless_render_surface.surface_provider().array(), 0, 0, width * sizeof(float) * 4, height, cudaMemcpyDeviceToHost));
         CUDA_CHECK_THROW(cudaMemcpy2DFromArray(fbuf_depth, width * sizeof(float) * 4, testbed.m_windowless_render_surface_depth.surface_provider().array(), 0, 0, width * sizeof(float) * 4, height, cudaMemcpyDeviceToHost));
 
-        size_t size;
-
-        size = width * height * 4;
-        
-        int buf_idx = 0;
-        int buf_depth_idx = 0;
-        for (int i = 0; i < size; i++)
-        {
-            if (i % 4 != 3) {
-                cbuf[buf_idx] = static_cast<int>(fbuf[i] * 255);
-                if (i % 4 == 0) {
-                    int val = static_cast<int>((fbuf_depth[i] * 0.03125f) * 255);
-                    cbuf_depth[buf_depth_idx] = val > 255 ? 255 : val;
-                    buf_depth_idx++;
-                }
-                buf_idx++;
-            }
-        }
-        
-
-        std::string a(cbuf, cbuf + buf_idx);
-        std::string b(cbuf_depth, cbuf_depth + buf_depth_idx);
-
-        std::vector<std::string> ret = {a, b};
-
-        return ret;
     }
 
     int socket_send_blocking(int clientfd, uint8_t *buf, size_t size)

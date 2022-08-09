@@ -15,6 +15,7 @@
 #include <neural-graphics-primitives/renderer_common.h>
 #include <neural-graphics-primitives/renderer_main.h>
 #include <neural-graphics-primitives/renderer_server.h>
+#include <neural-graphics-primitives/renderer_cube.cuh>
 
 #include <tiny-cuda-nn/common.h>
 
@@ -29,6 +30,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+
 
 using namespace args;
 using namespace ngp;
@@ -45,8 +47,8 @@ namespace nes
     {
         shutdown_requested = true;
     }
-
-    void render_server(std::string &nes_addr, uint16_t nes_port, std::string &scene_location, std::string &snapshot_location)
+    
+    void render_server(std::string &nes_addr, uint16_t nes_port, std::string &scene_location, std::string &snapshot_location, bool depth_test)
     {
         signal(SIGINT, signal_handler);
         GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -57,7 +59,7 @@ namespace nes
         testbed.load_training_data(scene_location);
         testbed.load_snapshot(snapshot_location);
 
-        std::thread _server_main_thread(server_main_thread, nes_addr, nes_port, std::ref(testbed), std::ref(shutdown_requested));
+        std::thread _server_main_thread(server_main_thread, nes_addr, nes_port, std::ref(testbed), std::ref(shutdown_requested), depth_test);
         _server_main_thread.join();
         tlog::info() << "render_server: All threads exited. Exiting program.";
     }

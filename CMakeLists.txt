@@ -148,6 +148,18 @@ endif(NGP_BUILD_WITH_GUI)
 ###########
 include_directories("dependencies/nanovdb")
 
+###########
+# glm     #
+###########
+include_directories("dependencies/glm")
+
+###########
+# glut    #
+###########
+add_subdirectory("dependencies/glut")
+include_directories("dependencies/glut/include")
+link_directories(${CMAKE_BINARY_DIR}/dependencies/glut/lib)
+
 ##########
 # OpenMP #
 ##########
@@ -215,6 +227,7 @@ set(SOURCES
 	src/renderer_main.cu
 	src/renderer_common.cu
 	src/renderer_server.cu
+	src/renderer_cube.cu
 	src/common_device.cu
 	src/marching_cubes.cu
 	src/nerf_loader.cu
@@ -287,7 +300,7 @@ target_compile_options(ngp PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}
 target_compile_definitions(ngp PUBLIC ${NGP_DEFINITIONS} ${TCNN_DEFINITIONS})
 
 add_executable(testbed src/main.cu)
-target_link_libraries(testbed PUBLIC ngp proto)
+target_link_libraries(testbed PUBLIC ngp proto glut GLU)
 target_compile_options(testbed PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
 target_compile_definitions(testbed PUBLIC ${NGP_DEFINITIONS} ${TCNN_DEFINITIONS})
 

@@ -14,6 +14,6 @@
 
 namespace nes
 {
-    void server_client_thread(int targetfd, ngp::Testbed &testbed, std::atomic<bool> &shutdown_requested);
-    void server_main_thread(std::string bind_addr, uint16_t bind_port, ngp::Testbed &testbed, std::atomic<bool> &shutdown_requested);
+    void server_client_thread(int targetfd, ngp::Testbed &testbed, std::atomic<bool> &shutdown_requested, bool depth_test);
+    void server_main_thread(std::string bind_addr, uint16_t bind_port, ngp::Testbed &testbed, std::atomic<bool> &shutdown_requested, bool depth_test);
 }
